@@ -23,6 +23,7 @@ export abstract class BaseService {
         let customError: string[] = [];
 
         if(response instanceof HttpErrorResponse) {
+
             if(response.statusText === "Unknown Error") {
                 customError.push("Ocorreu um erro desconhecido");
                 response.error.errors = customError;
@@ -30,6 +31,6 @@ export abstract class BaseService {
         }
 
         console.error(response);
-        return throwError(() => new Error(response));
+        return throwError(response);
     }
 }

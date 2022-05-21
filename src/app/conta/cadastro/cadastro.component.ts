@@ -28,6 +28,8 @@ export class CadastroComponent implements OnInit, AfterViewInit {
   genericValidator: GenericValidator;
   displayMessage: DisplayMessage = {};
 
+  mudancasNaoSalvas: boolean;
+
 
   constructor( private fb: FormBuilder, private contaService: ContaService, private router: Router, private toastr: ToastrService) { 
 
@@ -68,6 +70,7 @@ export class CadastroComponent implements OnInit, AfterViewInit {
 
         merge(...controlBlurs).subscribe(() => {
           this.displayMessage = this.genericValidator.processarMensagens(this.cadastroForm);
+          this.mudancasNaoSalvas = true;
         });
   }
 
@@ -80,6 +83,8 @@ export class CadastroComponent implements OnInit, AfterViewInit {
         sucesso => {this.processarSucesso(sucesso)},
         falha => {this.processarFalha(falha)}
       );
+
+      this.mudancasNaoSalvas = false;
     }
   }
 
@@ -97,8 +102,8 @@ export class CadastroComponent implements OnInit, AfterViewInit {
     }
   }
 
-  processarFalha(fail: any){
+  processarFalha(fail: any) {
     this.errors = fail.error.errors;
-    this.toastr.error('Ocorreu um erro!', 'Opa :(')
+    this.toastr.error('Ocorreu um erro!', 'Opa :(');
   }
 }
