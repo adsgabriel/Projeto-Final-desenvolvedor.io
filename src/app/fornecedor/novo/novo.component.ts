@@ -3,12 +3,14 @@ import { FormBuilder, FormGroup, Validators, FormControlName, AbstractControl } 
 import { Router } from '@angular/router';
 
 import { Observable, fromEvent, merge } from 'rxjs';
+import { utilsBr } from 'js-brasil';
 
 import { ToastrService } from 'ngx-toastr';
 
 import { ValidationMessages, GenericValidator, DisplayMessage } from 'src/app/utils/generic-form-validation';
 import { Fornecedor } from '../models/fornecedor';
 import { FornecedorService } from '../services/fornecedor.service';
+import { NgBrazilValidators } from 'ng-brazil';
 
 @Component({
   selector: 'app-novo',
@@ -26,6 +28,7 @@ export class NovoComponent implements OnInit {
   genericValidator: GenericValidator;
   displayMessage: DisplayMessage = {};
 
+  MASKS = utilsBr.MASKS;
   formResult: string = '';
 
   mudancasNaoSalvas: boolean;
@@ -41,6 +44,7 @@ export class NovoComponent implements OnInit {
       },
       documento: {
         required: 'Informe o Documento',
+        cpf: 'Cpf em formato invalido',
       },
       logradouro: {
         required: 'Informe o Logradouro',
@@ -69,10 +73,22 @@ export class NovoComponent implements OnInit {
 
     this.fornecedorForm = this.fb.group({
       nome: ['', [Validators.required]],
-      documento: ['', [Validators.required]],
+      documento: ['', [Validators.required, NgBrazilValidators.cpf]],
       ativo: ['', [Validators.required]],
-      tipoFornecedor: ['', [Validators.required]]     
+      tipoFornecedor: ['', [Validators.required]],     
+
+      endereco: this.fb.group({
+        logradouro: ['', [Validators.required]],
+        numero: ['', [Validators.required]],
+        complemento: [''],
+        bairro: ['', [Validators.required]],
+        cep: ['', [Validators.required, ]],
+        cidade: ['', [Validators.required]],
+        estado: ['', [Validators.required]]
+      })
     });
+
+    this.fornecedorForm.patchValue({ tipoFornecedor: '1', ativo: true })
   }
 
   ngAfterViewInit(): void {
