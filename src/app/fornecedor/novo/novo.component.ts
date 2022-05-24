@@ -1,5 +1,5 @@
 import { Component, OnInit, ViewChildren, ElementRef } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, FormControlName, AbstractControl } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, FormControlName, AbstractControl, FormControl } from '@angular/forms';
 import { Router } from '@angular/router';
 
 import { Observable, fromEvent, merge } from 'rxjs';
@@ -11,6 +11,7 @@ import { ValidationMessages, GenericValidator, DisplayMessage } from 'src/app/ut
 import { Fornecedor } from '../models/fornecedor';
 import { FornecedorService } from '../services/fornecedor.service';
 import { NgBrazilValidators } from 'ng-brazil';
+import { CepConsulta } from '../models/endereco';
 
 @Component({
   selector: 'app-novo',
@@ -27,6 +28,7 @@ export class NovoComponent implements OnInit {
   validationMessages: ValidationMessages;
   genericValidator: GenericValidator;
   displayMessage: DisplayMessage = {};
+  textoDocumento: string = 'CPF (requerido)';
 
   MASKS = utilsBr.MASKS;
   formResult: string = '';
@@ -44,7 +46,8 @@ export class NovoComponent implements OnInit {
       },
       documento: {
         required: 'Informe o Documento',
-        cpf: 'Cpf em formato invalido',
+        cpf: 'CPF em formato invalido',
+        cnpj: 'CNPJ em formato invalido'
       },
       logradouro: {
         required: 'Informe o Logradouro',
@@ -56,7 +59,8 @@ export class NovoComponent implements OnInit {
         required: 'Informe o Bairro',
       },
       cep: {
-        required: 'Informe o CEP'
+        required: 'Informe o CEP',
+        cep: 'CEP em formato invalido'
       },
       cidade: {
         required: 'Informe a Cidade',
@@ -82,7 +86,7 @@ export class NovoComponent implements OnInit {
         numero: ['', [Validators.required]],
         complemento: [''],
         bairro: ['', [Validators.required]],
-        cep: ['', [Validators.required, ]],
+        cep: ['', [Validators.required, NgBrazilValidators.cep ]],
         cidade: ['', [Validators.required]],
         estado: ['', [Validators.required]]
       })
@@ -92,13 +96,71 @@ export class NovoComponent implements OnInit {
   }
 
   ngAfterViewInit(): void {
+    
+    this.tipoFornecedorForm().valueChanges.subscribe(() => {
+      this.trocarValidacaoDocumento();
+      this.configurarElementosValidacao();
+      this.validarFormulario();
+    });
+
+    this.configurarElementosValidacao();
+
+  }
+
+  configurarElementosValidacao() {
     let controlBlurs: Observable<any>[] = this.formInputElements
       .map((formControl: ElementRef) => fromEvent(formControl.nativeElement, 'blur'));
 
-    merge(...controlBlurs).subscribe(() => {
-      this.displayMessage = this.genericValidator.processarMensagens(this.fornecedorForm);
-      this.mudancasNaoSalvas = true;
+      merge(...controlBlurs).subscribe(() => {
+        this.validarFormulario();
+      });
+  }
+
+  validarFormulario(){
+    this.displayMessage = this.genericValidator.processarMensagens(this.fornecedorForm);
+    this.mudancasNaoSalvas = true;
+  }
+
+  trocarValidacaoDocumento(){
+    if(this.tipoFornecedorForm().value === '1'){
+      this.documento().clearValidators();
+      this.documento().setValidators([Validators.required, NgBrazilValidators.cpf]);
+      this.textoDocumento = 'CPF (requerido)';
+    }
+    else{
+      this.documento().clearValidators();
+      this.documento().setValidators([Validators.required, NgBrazilValidators.cnpj]);
+      this.textoDocumento = 'CNPJ (requerido)';
+    }
+  }
+
+  documento(): AbstractControl {
+    return this.fornecedorForm.get('documento');
+  }
+
+ 
+  buscarCep(cep: string) {
+    this.fornecedorService.consultarCep(cep)
+      .subscribe(
+        cepRetorno => this.preencherEnderecoConsulta(cepRetorno),
+        erro => this.errors.push(erro));
+  }
+
+  preencherEnderecoConsulta(cepConsulta: CepConsulta) {
+
+    this.fornecedorForm.patchValue({
+      endereco: {
+        logradouro: cepConsulta.logradouro,
+        bairro: cepConsulta.bairro,
+        cep: cepConsulta.cep,
+        cidade: cepConsulta.localidade,
+        estado: cepConsulta.uf
+      }
     });
+  }
+
+  tipoFornecedorForm(): AbstractControl {
+    return this.fornecedorForm.get('tipoFornecedor');
   }
 
    adicionarFornecedor() {
