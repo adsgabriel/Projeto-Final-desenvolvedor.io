@@ -16,9 +16,9 @@
         <div class="form-group">
             <label class="col-md-2 control-label">E-mail</label>
             <div class="col-md-10">
-                <input class="form-control" id="email" type="text" placeholder="E-mail (requerido)" formControlName="email" [ngClass]="{'is-invalid': displayMessage['email'] }" />
-                <span class="text-danger" *ngIf="displayMessage['email']">
-                                <p [innerHTML]="displayMessage['email']"></p>
+                <input class="form-control" id="email" type="text" placeholder="E-mail (requerido)" formControlName="email" [ngClass]="{'is-invalid': displayMessage.email }" />
+                <span class="text-danger" *ngIf="displayMessage.email">
+                                <p [innerHTML]="displayMessage.email"></p>
                             </span>
             </div>
         </div>
@@ -26,9 +26,9 @@
         <div class="form-group">
             <label class="col-md-2 control-label">Senha</label>
             <div class="col-md-10">
-                <input class="form-control" id="password" type="password" placeholder="Senha (requerido)" formControlName="password" [ngClass]="{'is-invalid': displayMessage['password'] }" />
-                <span class="text-danger" *ngIf="displayMessage['password']">
-                                <p [innerHTML]="displayMessage['password']"></p>
+                <input class="form-control" id="password" type="password" placeholder="Senha (requerido)" formControlName="password" [ngClass]="{'is-invalid': displayMessage.password }" />
+                <span class="text-danger" *ngIf="displayMessage.password">
+                                <p [innerHTML]="displayMessage.password"></p>
                             </span>
             </div>
         </div>

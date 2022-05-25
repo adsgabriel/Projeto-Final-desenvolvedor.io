@@ -1,23 +1,20 @@
 import { Component, OnInit, ViewChildren, ElementRef } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, FormControlName, AbstractControl, FormControl } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, FormControlName, AbstractControl } from '@angular/forms';
 import { Router } from '@angular/router';
-
-import { Observable, fromEvent, merge } from 'rxjs';
-import { utilsBr } from 'js-brasil';
 
 import { ToastrService } from 'ngx-toastr';
 
-import { ValidationMessages, GenericValidator, DisplayMessage } from 'src/app/utils/generic-form-validation';
 import { Fornecedor } from '../models/fornecedor';
 import { FornecedorService } from '../services/fornecedor.service';
-import { NgBrazilValidators } from 'ng-brazil';
 import { CepConsulta } from '../models/endereco';
+import { StringUtils } from 'src/app/utils/string-utils';
+import { FormBaseComponent } from 'src/app/base-components/form-base.component';
 
 @Component({
   selector: 'app-novo',
   templateUrl: './novo.component.html'
 })
-export class NovoComponent implements OnInit {
+export class NovoComponent extends FormBaseComponent implements OnInit {
 
   @ViewChildren(FormControlName, { read: ElementRef }) formInputElements: ElementRef[];
 
@@ -25,20 +22,15 @@ export class NovoComponent implements OnInit {
   fornecedorForm: FormGroup;
   fornecedor: Fornecedor = new Fornecedor();
 
-  validationMessages: ValidationMessages;
-  genericValidator: GenericValidator;
-  displayMessage: DisplayMessage = {};
   textoDocumento: string = 'CPF (requerido)';
-
-  MASKS = utilsBr.MASKS;
   formResult: string = '';
-
-  mudancasNaoSalvas: boolean;
-
+  
   constructor(private fb: FormBuilder,
     private fornecedorService: FornecedorService,
     private router: Router,
     private toastr: ToastrService) {
+
+    super();
 
     this.validationMessages = {
       nome: {
@@ -46,8 +38,8 @@ export class NovoComponent implements OnInit {
       },
       documento: {
         required: 'Informe o Documento',
-        cpf: 'CPF em formato invalido',
-        cnpj: 'CNPJ em formato invalido'
+        cpf: 'CPF em formato inválido',
+        cnpj: 'CNPJ em formato inválido'
       },
       logradouro: {
         required: 'Informe o Logradouro',
@@ -60,7 +52,7 @@ export class NovoComponent implements OnInit {
       },
       cep: {
         required: 'Informe o CEP',
-        cep: 'CEP em formato invalido'
+        cep: 'CEP em formato inválido'
       },
       cidade: {
         required: 'Informe a Cidade',
@@ -70,76 +62,69 @@ export class NovoComponent implements OnInit {
       }
     };
 
-    this.genericValidator = new GenericValidator(this.validationMessages);
+    super.configurarMensagensValidacaoBase(this.validationMessages);
   }
 
   ngOnInit() {
 
     this.fornecedorForm = this.fb.group({
       nome: ['', [Validators.required]],
-      documento: ['', [Validators.required, NgBrazilValidators.cpf]],
+      documento: ['', [Validators.required]],
       ativo: ['', [Validators.required]],
-      tipoFornecedor: ['', [Validators.required]],     
+      tipoFornecedor: ['', [Validators.required]],
 
       endereco: this.fb.group({
         logradouro: ['', [Validators.required]],
         numero: ['', [Validators.required]],
         complemento: [''],
         bairro: ['', [Validators.required]],
-        cep: ['', [Validators.required, NgBrazilValidators.cep ]],
+        cep: ['', [Validators.required]],
         cidade: ['', [Validators.required]],
         estado: ['', [Validators.required]]
       })
     });
 
-    this.fornecedorForm.patchValue({ tipoFornecedor: '1', ativo: true })
+    this.fornecedorForm.patchValue({ tipoFornecedor: '1', ativo: true });
   }
 
   ngAfterViewInit(): void {
-    
-    this.tipoFornecedorForm().valueChanges.subscribe(() => {
-      this.trocarValidacaoDocumento();
-      this.configurarElementosValidacao();
-      this.validarFormulario();
-    });
 
-    this.configurarElementosValidacao();
-
-  }
-
-  configurarElementosValidacao() {
-    let controlBlurs: Observable<any>[] = this.formInputElements
-      .map((formControl: ElementRef) => fromEvent(formControl.nativeElement, 'blur'));
-
-      merge(...controlBlurs).subscribe(() => {
-        this.validarFormulario();
+    this.tipoFornecedorForm().valueChanges
+      .subscribe(() => {
+        this.trocarValidacaoDocumento();
+        super.configurarValidacaoFormularioBase(this.formInputElements, this.fornecedorForm)
+        super.validarFormulario(this.fornecedorForm);
       });
+
+      super.configurarValidacaoFormularioBase(this.formInputElements, this.fornecedorForm)
+  }
+    
+  trocarValidacaoDocumento() {
+    if (this.tipoFornecedorForm().value === "1") {
+      this.documento().clearValidators();
+      this.documento().setValidators([Validators.required]);
+      this.textoDocumento = "CPF (requerido)";
+    }
+    else {
+      this.documento().clearValidators();
+      this.documento().setValidators([Validators.required]);
+      this.textoDocumento = "CNPJ (requerido)";
+    }
   }
 
-  validarFormulario(){
-    this.displayMessage = this.genericValidator.processarMensagens(this.fornecedorForm);
-    this.mudancasNaoSalvas = true;
-  }
-
-  trocarValidacaoDocumento(){
-    if(this.tipoFornecedorForm().value === '1'){
-      this.documento().clearValidators();
-      this.documento().setValidators([Validators.required, NgBrazilValidators.cpf]);
-      this.textoDocumento = 'CPF (requerido)';
-    }
-    else{
-      this.documento().clearValidators();
-      this.documento().setValidators([Validators.required, NgBrazilValidators.cnpj]);
-      this.textoDocumento = 'CNPJ (requerido)';
-    }
+  tipoFornecedorForm(): AbstractControl {
+    return this.fornecedorForm.get('tipoFornecedor');
   }
 
   documento(): AbstractControl {
     return this.fornecedorForm.get('documento');
   }
 
- 
   buscarCep(cep: string) {
+
+    cep = StringUtils.somenteNumeros(cep);
+    if (cep.length < 8) return;
+
     this.fornecedorService.consultarCep(cep)
       .subscribe(
         cepRetorno => this.preencherEnderecoConsulta(cepRetorno),
@@ -159,28 +144,30 @@ export class NovoComponent implements OnInit {
     });
   }
 
-  tipoFornecedorForm(): AbstractControl {
-    return this.fornecedorForm.get('tipoFornecedor');
-  }
-
-   adicionarFornecedor() {
+  adicionarFornecedor() {
     if (this.fornecedorForm.dirty && this.fornecedorForm.valid) {
+
       this.fornecedor = Object.assign({}, this.fornecedor, this.fornecedorForm.value);
       this.formResult = JSON.stringify(this.fornecedor);
+
+      this.fornecedor.endereco.cep = StringUtils.somenteNumeros(this.fornecedor.endereco.cep);
+      this.fornecedor.documento = StringUtils.somenteNumeros(this.fornecedor.documento);
+      // forçando o tipo fornecedor ser serializado como INT
+      this.fornecedor.tipoFornecedor = parseInt(this.fornecedor.tipoFornecedor.toString());
 
       this.fornecedorService.novoFornecedor(this.fornecedor)
         .subscribe(
           sucesso => { this.processarSucesso(sucesso) },
           falha => { this.processarFalha(falha) }
         );
-
-      this.mudancasNaoSalvas = false;
     }
   }
 
   processarSucesso(response: any) {
     this.fornecedorForm.reset();
     this.errors = [];
+
+    this.mudancasNaoSalvas = false;
 
     let toast = this.toastr.success('Fornecedor cadastrado com sucesso!', 'Sucesso!');
     if (toast) {

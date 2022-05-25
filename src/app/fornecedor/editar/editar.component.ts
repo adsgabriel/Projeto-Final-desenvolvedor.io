@@ -2,20 +2,21 @@ import { Component, OnInit, ViewChildren, ElementRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, FormControlName, AbstractControl } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 
-import { Observable, fromEvent, merge } from 'rxjs';
-
 import { ToastrService } from 'ngx-toastr';
+import { NgbModalConfig, NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { NgxSpinnerService } from 'ngx-spinner';
 
-import { ValidationMessages, GenericValidator, DisplayMessage } from 'src/app/utils/generic-form-validation';
+import { StringUtils } from 'src/app/utils/string-utils';
 import { Fornecedor } from '../models/fornecedor';
-import { Endereco } from '../models/endereco';
+import { Endereco, CepConsulta } from '../models/endereco';
 import { FornecedorService } from '../services/fornecedor.service';
+import { FormBaseComponent } from 'src/app/base-components/form-base.component';
 
 @Component({
   selector: 'app-editar',
   templateUrl: './editar.component.html'
 })
-export class EditarComponent implements OnInit {
+export class EditarComponent extends FormBaseComponent implements OnInit {
 
   @ViewChildren(FormControlName, { read: ElementRef }) formInputElements: ElementRef[];
 
@@ -27,28 +28,31 @@ export class EditarComponent implements OnInit {
   fornecedor: Fornecedor = new Fornecedor();
   endereco: Endereco = new Endereco();
 
-  validationMessages: ValidationMessages;
-  genericValidator: GenericValidator;
-  displayMessage: DisplayMessage = {};
   textoDocumento: string = '';
-
   tipoFornecedor: number;
-  formResult: string = '';
-
-  mudancasNaoSalvas: boolean;
 
   constructor(private fb: FormBuilder,
     private fornecedorService: FornecedorService,
     private router: Router,
     private toastr: ToastrService,
-    private route: ActivatedRoute) {
+    private route: ActivatedRoute,
+    config: NgbModalConfig, 
+    private modalService: NgbModal,
+    private spinner: NgxSpinnerService) {
+
+    super();
+
+    config.backdrop = 'static';
+    config.keyboard = false;
 
     this.validationMessages = {
       nome: {
         required: 'Informe o Nome',
       },
       documento: {
-        required: 'Informe o Documento'
+        required: 'Informe o Documento',
+        cpf: 'CPF em formato inválido',
+        cnpj: 'CNPJ em formato inválido'
       },
       logradouro: {
         required: 'Informe o Logradouro',
@@ -60,7 +64,8 @@ export class EditarComponent implements OnInit {
         required: 'Informe o Bairro',
       },
       cep: {
-        required: 'Informe o CEP'
+        required: 'Informe o CEP',
+        cep: 'CEP em formato inválido',
       },
       cidade: {
         required: 'Informe a Cidade',
@@ -70,13 +75,15 @@ export class EditarComponent implements OnInit {
       }
     };
 
-    this.genericValidator = new GenericValidator(this.validationMessages);
+    super.configurarMensagensValidacaoBase(this.validationMessages);
 
-    this.fornecedorService.obterPorId(route.params['id'])
-      .subscribe(fornecedor => this.fornecedor = fornecedor);
+    this.fornecedor = this.route.snapshot.data['fornecedor'];
+    this.tipoFornecedor = this.fornecedor.tipoFornecedor;
   }
 
   ngOnInit() {
+
+    this.spinner.show();
 
     this.fornecedorForm = this.fb.group({
       id: '',
@@ -97,15 +104,94 @@ export class EditarComponent implements OnInit {
       estado: ['', [Validators.required]],
       fornecedorId: ''
     });
+
+    this.preencherForm();
+
+    setTimeout(() => {
+      this.spinner.hide();
+    }, 1000);
+  }
+
+  preencherForm() {
+
+    this.fornecedorForm.patchValue({
+      id: this.fornecedor.id,
+      nome: this.fornecedor.nome,
+      ativo: this.fornecedor.ativo,
+      tipoFornecedor: this.fornecedor.tipoFornecedor.toString(),
+      documento: this.fornecedor.documento
+    });
+
+    if (this.tipoFornecedorForm().value === "1") {
+      this.documento().setValidators([Validators.required]);
+    }
+    else {
+      this.documento().setValidators([Validators.required]);
+    }
+
+    this.enderecoForm.patchValue({
+      id: this.fornecedor.endereco.id,
+      logradouro: this.fornecedor.endereco.logradouro,
+      numero: this.fornecedor.endereco.numero,
+      complemento: this.fornecedor.endereco.complemento,
+      bairro: this.fornecedor.endereco.bairro,
+      cep: this.fornecedor.endereco.cep,
+      cidade: this.fornecedor.endereco.cidade,
+      estado: this.fornecedor.endereco.estado
+    });
   }
 
   ngAfterViewInit() {
-    let controlBlurs: Observable<any>[] = this.formInputElements
-      .map((formControl: ElementRef) => fromEvent(formControl.nativeElement, 'blur'));
+    this.tipoFornecedorForm().valueChanges.subscribe(() => {
+      this.trocarValidacaoDocumento();
+      super.configurarValidacaoFormularioBase(this.formInputElements, this.fornecedorForm)
+      super.validarFormulario(this.fornecedorForm)
+    });
 
-    merge(...controlBlurs).subscribe(() => {
-      this.displayMessage = this.genericValidator.processarMensagens(this.fornecedorForm);
-      this.mudancasNaoSalvas = true;
+    super.configurarValidacaoFormularioBase(this.formInputElements, this.fornecedorForm);
+  }
+
+  trocarValidacaoDocumento() {
+
+    if (this.tipoFornecedorForm().value === "1") {
+      this.documento().clearValidators();
+      this.documento().setValidators([Validators.required]);
+    }
+
+    else {
+      this.documento().clearValidators();
+      this.documento().setValidators([Validators.required]);
+    }
+  }
+
+  documento(): AbstractControl {
+    return this.fornecedorForm.get('documento');
+  }
+
+  tipoFornecedorForm(): AbstractControl {
+    return this.fornecedorForm.get('tipoFornecedor');
+  }
+
+  buscarCep(cep: string) {
+
+    cep = StringUtils.somenteNumeros(cep);
+    if (cep.length < 8) return;
+
+    this.fornecedorService.consultarCep(cep)
+      .subscribe({
+        next: cepRetorno => this.preencherEnderecoConsulta(cepRetorno),
+        error: erro => this.errors.push(erro)
+      });
+  }
+
+  preencherEnderecoConsulta(cepConsulta: CepConsulta) {
+
+    this.enderecoForm.patchValue({
+      logradouro: cepConsulta.logradouro,
+      bairro: cepConsulta.bairro,
+      cep: cepConsulta.cep,
+      cidade: cepConsulta.localidade,
+      estado: cepConsulta.uf
     });
   }
 
@@ -113,14 +199,16 @@ export class EditarComponent implements OnInit {
     if (this.fornecedorForm.dirty && this.fornecedorForm.valid) {
 
       this.fornecedor = Object.assign({}, this.fornecedor, this.fornecedorForm.value);
+      this.fornecedor.documento = StringUtils.somenteNumeros(this.fornecedor.documento);
+
+      /* Workaround para evitar cast de string para int no back-end */
+      this.fornecedor.tipoFornecedor = parseInt(this.fornecedor.tipoFornecedor.toString());
 
       this.fornecedorService.atualizarFornecedor(this.fornecedor)
-        .subscribe(
-          sucesso => { this.processarSucesso(sucesso) },
-          falha => { this.processarFalha(falha) }
-        );
-
-      this.mudancasNaoSalvas = false;
+        .subscribe({
+         next: sucesso => { this.processarSucesso(sucesso) },
+         error: falha => { this.processarFalha(falha) }
+        });
     }
   }
 
@@ -138,5 +226,38 @@ export class EditarComponent implements OnInit {
   processarFalha(fail: any) {
     this.errors = fail.error.errors;
     this.toastr.error('Ocorreu um erro!', 'Opa :(');
+  }
+
+  editarEndereco() {
+    if (this.enderecoForm.dirty && this.enderecoForm.valid) {
+
+      this.endereco = Object.assign({}, this.endereco, this.enderecoForm.value);
+
+      this.endereco.cep = StringUtils.somenteNumeros(this.endereco.cep);
+      this.endereco.fornecedorId = this.fornecedor.id;
+
+      this.fornecedorService.atualizarEndereco(this.endereco)
+        .subscribe({
+         next: () => this.processarSucessoEndereco(this.endereco),
+         error: falha => { this.processarFalhaEndereco(falha) }
+        });
+    }
+  }
+
+  processarSucessoEndereco(endereco: Endereco) {
+    this.errors = [];
+
+    this.toastr.success('Endereço atualizado com sucesso!', 'Sucesso!');
+    this.fornecedor.endereco = endereco
+    this.modalService.dismissAll();
+  }
+
+  processarFalhaEndereco(fail: any) {
+    this.errorsEndereco = fail.error.errors;
+    this.toastr.error('Ocorreu um erro!', 'Opa :(');
+  }
+
+  abrirModal(content) {
+    this.modalService.open(content);
   }
 }

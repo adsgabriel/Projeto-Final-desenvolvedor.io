@@ -1,15 +1,14 @@
-import { Component } from "@angular/core";
-
+import { Component } from '@angular/core';
 
 @Component({
-    selector: 'app-menu',
-    templateUrl: './menu.component.html'
+  selector: 'app-menu',
+  templateUrl: './menu.component.html'
 })
 export class MenuComponent {
 
-    public isCollapsed: boolean;
+  public isCollapsed: boolean;
 
-    constructor() {
-        this.isCollapsed = true;
-    }
+  constructor() {
+    this.isCollapsed = true;
+  }
 }

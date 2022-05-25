@@ -1,22 +1,22 @@
-import { Injectable } from "@angular/core";
-import { ActivatedRouteSnapshot, CanActivate, CanDeactivate, Router, RouterStateSnapshot, UrlTree } from "@angular/router";
-import { Observable } from "rxjs";
-import { LocalStorageUtils } from "src/app/utils/localstorage";
-import { CadastroComponent } from "../cadastro/cadastro.component";
+import { Injectable } from '@angular/core';
+import { CanDeactivate, CanActivate, Router } from '@angular/router';
+import { CadastroComponent } from '../cadastro/cadastro.component';
+import { LocalStorageUtils } from 'src/app/utils/localstorage';
 
 
 @Injectable()
-export class ContaGuard implements CanDeactivate<CadastroComponent>, CanActivate{
-
-    localStorageUtils = new LocalStorageUtils;
+export class ContaGuard implements CanDeactivate<CadastroComponent>, CanActivate {
+    
+    localStorageUtils = new LocalStorageUtils();
 
     constructor(private router: Router){}
-
+    
     canDeactivate(component: CadastroComponent) {
         if(component.mudancasNaoSalvas) {
-            return window.confirm('tem certeza que deseja abandonar o preenchimento do formulario?')
-        }
-        return true;
+            return window.confirm('Tem certeza que deseja abandonar o preenchimento do formulario?');
+        }  
+
+        return true
     }
 
     canActivate() {
@@ -26,4 +26,5 @@ export class ContaGuard implements CanDeactivate<CadastroComponent>, CanActivate
 
         return true;
     }
+    
 }

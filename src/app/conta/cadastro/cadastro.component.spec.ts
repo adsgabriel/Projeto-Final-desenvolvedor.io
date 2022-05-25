@@ -1,4 +1,6 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { async, ComponentFixture, TestBed } from '@angular/core/testing';
+import { AppModule } from 'src/app/app.module';
+import { ContaModule } from '../conta.module';
 
 import { CadastroComponent } from './cadastro.component';
 
@@ -7,12 +9,12 @@ describe('CadastroComponent', () => {
   let fixture: ComponentFixture<CadastroComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [ CadastroComponent ]
+    TestBed.configureTestingModule({
+      imports: [ContaModule, AppModule]
     })
     .compileComponents();
   });
-
+  
   beforeEach(() => {
     fixture = TestBed.createComponent(CadastroComponent);
     component = fixture.componentInstance;
