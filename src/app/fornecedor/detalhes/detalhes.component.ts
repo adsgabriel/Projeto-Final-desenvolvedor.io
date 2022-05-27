@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { Fornecedor } from '../models/fornecedor';
 import { DomSanitizer } from '@angular/platform-browser';
+import { MASKS } from 'ng-brazil';
 
 import { ActivatedRoute } from '@angular/router';
 
@@ -12,6 +13,7 @@ export class DetalhesComponent {
 
   fornecedor: Fornecedor = new Fornecedor();
   enderecoMap;
+  MASKS = MASKS;
 
   constructor(
     private route: ActivatedRoute,
